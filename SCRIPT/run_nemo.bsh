@@ -1,0 +1,135 @@
+#!/bin/bash
+
+date_now=$1
+
+# Date - 1
+datem1=`date -d "$date_now -1 day" +%Y%m%d`
+# Date + 1
+datep1=`date -d "$date_now +1 day" +%Y%m%d`
+
+NEMO_rn_Dt=600 
+JOB_NEMO_hours_in_one_job=24
+time_steps_in_one_hour=$(expr 3600 \/ ${NEMO_rn_Dt})
+time_steps_in_one_job=$(expr ${time_steps_in_one_hour} \* ${JOB_NEMO_hours_in_one_job})
+if [ $date_now -eq 20210101 ]; then
+   NEMO_RESTART_nn_itend=0
+else
+   NEMO_RESTART=`ls  ${outdir}/${datem1}'/model/medfs831_'*'_restart.nc'`
+   NEMO_RESTART_nn_itend=$( ncdump -v kt ${NEMO_RESTART} | grep "kt =" | cut -d" " -f 4 )
+fi
+it000=$(expr ${NEMO_RESTART_nn_itend} + 1)
+itend=$(expr ${NEMO_RESTART_nn_itend} + ${time_steps_in_one_job})
+
+
+#--------------------
+#clean working dir  |
+#--------------------
+rm -f ${wrkdir}/*
+#---------------
+#lnk conf file |
+#---------------
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/context_nemo.xml'                 ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/iodef.xml'                       ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/axis_def_nemo.xml'               ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/grid_def_nemo.xml'               ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/domain_def_nemo.xml'             ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/field_def_nemo-oce.xml'          ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/file_def_nemo-oce.xml'           ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/domain_def_nemo.xml'             ${wrkdir}/.
+ln -fs $PWD'/../MyNEMO/MY_NAMELIST/namelist_ref'                    ${wrkdir}/.
+#---------------
+#lnk dom file  |
+#---------------
+ln -fs ${nemoroot}/tools/DOMAINcfg/domain_cfg.nc       ${wrkdir}/.
+#--------------------
+#lnk bdycoord file  |
+#--------------------
+ln -fs ${nemoroot}/tools/DOMAINcfg/coordinates.bdy.nc   ${wrkdir}/.
+#---------------
+#lnk MDT file  |
+#---------------
+ln -fs ${dataroot}/MDT/mdt_medfs831.nc         ${wrkdir}/MDT.nc
+#---------------
+#lnk obs       |
+#---------------
+if $ln_obsmisfits; then
+   ln -fs ${dataroot}/OBSxNEMO/${date_now}/*      ${wrkdir}/.
+fi
+#---------------
+#lnk exe file  |
+#---------------
+cp   ${nemofile}                               ${wrkdir}/nemo.exe
+#-----------------
+#lnk atm forcing  |
+#-----------------
+ln -fs ${dataroot}/ATM/*                       ${wrkdir}/.
+#--------------
+# IC          |
+#--------------
+if [ $date_now -eq 20210101 ]; then
+   ln_tsd_init=true
+   ln -fs ${dataroot}/RESTART/medfs831-eas8_01052160_restart.nc  ${wrkdir}/medfs831-eas8_01052160_restart.nc_y2021.nc
+   rstfile=medfs831-eas8_01052160_restart
+else
+  ln_tsd_init=false
+  rstfile=`ls ${outdir}/${datem1}'/model/medfs831_'*'_restart.nc'`
+  rstfile=`basename $rstfile`
+  rstfile=${rstfile::-3}
+  ln -fs ${outdir}/${datem1}/model/${rstfile}.nc ${wrkdir}/.
+fi
+#-----------------
+#lnk INCREMENT   |
+#-----------------
+analysis=${OCEANVAR}
+if [ $date_now -eq 20210101 ]; then
+   analysis=false 
+   ln_rstart=false
+else
+   ln_rstart=true
+   if  ${OCEANVAR}; then
+      ln -fs ${outdir}/${datem1}/oceanvar/ANINCR.NC.${date_now}00             ${wrkdir}/ANINCR.nc
+   fi
+fi
+# If assimilation is activated force computation of misfits
+if  ${OCEANVAR}; then
+   ln_obsmisfits=true
+fi
+#-----------------
+#submit NEMO     |
+#-----------------
+sed -e "s/@nn_it000@/${it000}/g"   \
+    -e "s/@nn_itend@/${itend}/g" \
+    -e "s/@RESTART_FILE@/${rstfile}/g" \
+    -e "s/@ln_obsmisfits@/${ln_obsmisfits}/g" \
+    -e "s/@ln_rstart@/${ln_rstart}/g" \
+    -e "s/@ln_tsd_init@/${ln_tsd_init}/g" \
+    -e "s/@ln_trainc@/${analysis}/g" \
+    -e "s/@ln_dyninc@/${analysis}/g" \
+    -e "s/@ln_sshinc@/${analysis}/g" \
+    -e "s/@ln_asmdin@/${analysis}/g" \
+${nemonml} > ${wrkdir}/namelist_cfg
+
+cd  ${wrkdir}
+mpirun -np 8 ./nemo.exe 
+cd -
+
+
+#-----------------
+# mv  OUTPUT     |
+#-----------------
+mkdir -p ${outdir}/${date_now}/model
+
+if [ $ln_obsmisfits == false ]; then
+   mv ${wrkdir}/layout.dat                                 ${dataroot}/.
+fi
+
+mv ${wrkdir}/INSMIS_*                                      ${outdir}/${date_now}/model/.
+mv ${wrkdir}/SLAMIS_*                                      ${outdir}/${date_now}/model/.
+mv ${wrkdir}/ocean.output                                  ${outdir}/${date_now}/model/.
+mv ${wrkdir}'/medfs831_1d_'${date_now}'_ALL_grid_T.nc'     ${outdir}/${date_now}/model/.
+mv ${wrkdir}'/medfs831_1d_'${date_now}'_ALL_grid_U.nc'     ${outdir}/${date_now}/model/.
+mv ${wrkdir}'/medfs831_1d_'${date_now}'_ALL_grid_V.nc'     ${outdir}/${date_now}/model/.
+mv ${wrkdir}'/medfs831_1d_'${date_now}'_ALL_grid_W.nc'     ${outdir}/${date_now}/model/.
+mv ${wrkdir}'/medfs831_'*${itend}'_restart.nc'             ${outdir}/${date_now}/model/.
+rm ${wrkdir}/*
+

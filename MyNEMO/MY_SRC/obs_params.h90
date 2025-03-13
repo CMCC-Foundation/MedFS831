@@ -1,0 +1,40 @@
+!... General
+INTEGER(i4), PARAMETER :: NoFams=4              ! Number of Obs families
+INTEGER(i4), PARAMETER :: NnINS=1              ! Index INSITU
+INTEGER(i4), PARAMETER :: NnSLA=2              ! Index SLA
+INTEGER(i4), PARAMETER :: NnSST=3              ! Index SST
+INTEGER(i4), PARAMETER :: NnSSS=4              ! Index SSS
+
+!... Dimensions
+INTEGER(i4), PARAMETER :: NoParams=3            ! Number of Params
+INTEGER(i4), PARAMETER :: NoAssimParams=2       ! Number of Params
+INTEGER(i4), PARAMETER :: NoinSitu=4            ! Number of Insitu Obs types
+
+!... Obs Parameter
+INTEGER(i4), PARAMETER :: kksal=1               ! Salinity
+INTEGER(i4), PARAMETER :: kktemp=2              ! Temperature
+INTEGER(i4), PARAMETER :: kkpotemp=3            ! Potential Temperature
+INTEGER(i4), PARAMETER :: kksla=4               ! Sea-level anomaly
+INTEGER(i4), PARAMETER :: kksst=5               ! Sea-surface temperature
+INTEGER(i4), PARAMETER :: kksss=6               ! Sea-surface salinity
+INTEGER(I4), PARAMETER :: KKPRE=7               ! SEA PRESSURE
+INTEGER(I4), PARAMETER :: KKHCDR=8              ! HORIZONTAL CURRENT DIRECTION
+INTEGER(I4), PARAMETER :: KKHCSP=9              ! HORIZONTAL CURRENT SPEED
+INTEGER(I4), PARAMETER :: KKHCUC=10             ! HORIZONTAL CURRENT U-COMPONENT
+INTEGER(I4), PARAMETER :: KKHCVC=11             ! HORIZONTAL CURRENT V-COMPONENT
+INTEGER(I4), PARAMETER :: KKSSH=12              ! SEA-SURFACE HEIGHT
+INTEGER(I4), PARAMETER :: KKT2M=13              ! TEMPERATURE AT 2M
+INTEGER(I4), PARAMETER :: KKQ2M=14              ! HUMIDITY AT 2M
+
+!... Obs Type
+INTEGER(i4), PARAMETER :: kkxbt    = 401        ! XBT/MBT
+INTEGER(i4), PARAMETER :: kktesac  = 741        ! Tesac
+INTEGER(i4), PARAMETER :: kkargo   = 831        ! Argo
+INTEGER(i4), PARAMETER :: kkbuoy   = 820        ! Buoys
+
+!... Obs Type -- dummy version
+INTEGER(i4), PARAMETER :: ksxbt    =   1        ! XBT/MBT
+INTEGER(i4), PARAMETER :: kstesac  =   2        ! Tesac
+INTEGER(i4), PARAMETER :: ksargo   =   3        ! Argo
+INTEGER(i4), PARAMETER :: ksbuoy   =   4        ! Buoys
+INTEGER(i4), PARAMETER :: ksair2   =   5        ! T/Q at 2m

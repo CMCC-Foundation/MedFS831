@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# 0) Manage Date
+date_now=$1
+datep1=$(date +%Y%m%d  -d "$date_now + 1 day")
+date_y=$( echo "${date_now}" | cut -c1-4 )
+date_m=$( echo "${date_now}" | cut -c5-6 )
+date_d=$( echo "${date_now}" | cut -c7-8 )
+
+#--------------------
+#clean working dir  |
+#--------------------
+rm -f ${wrkdir}/*
+
+
+# 1) Model Detiding 
+ln -sf "${dataroot}/TIDE/amppha2D_medfs831.nc"       ${wrkdir}/amppha2D_0_sossheig_20210701_20211231_mod_EAS7.nc
+python ${oceanVarprep} ${outdir}/${date_now}/model   ${wrkdir}
+
+# 2) OceanVar links
+ln -sf  ${dataroot}/grid_medfs831.nc                 ${wrkdir}/grid1.nc
+ln -sf "${dataroot}/EOF/EOF_M${date_m}_831.nc"       ${wrkdir}/eofs.nc
+ln -sf ${oceanvarfile}                               ${wrkdir}/.
+
+# 3) OceanVar Namelist
+mpii=4 
+mpij=2  
+ncores=$(($mpii * $mpij))
+sed  -e "s/@YYYYMMDD@/${date_now}/g" \
+     -e "s/@MPII@/${mpii}/g" \
+     -e "s/@MPIJ@/${mpij}/g" \
+        ${oceanvarnml} > ${wrkdir}/OceanVar_nml
+
+
+# 4) Run Oceanvar 
+cd  ${wrkdir}
+mpirun -np $ncores ./OceanVar
+cd -
+
+# 5) Post Processing
+cdo  merge ${wrkdir}/corr_*                                 ${wrkdir}/ANINCR.NC.${datep1}00
+ncrename -d im,x -d jm,y -d km,lev                          ${wrkdir}/ANINCR.NC.${datep1}00
+
+
+#-----------------
+# mv  OUTPUT     |
+#-----------------
+mkdir -p ${outdir}/${date_now}/oceanvar
+
+mv ${wrkdir}'/corr_tem.nc'            ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/corr_sal.nc'            ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/corr_uvl.nc'            ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/corr_vvl.nc'            ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/corr_eta.nc'            ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}"/ANINCR.NC.${datep1}00"  ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/obs.dat'                ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/obsstat_'*'.nc'         ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/*_stat.txt'             ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/iterate.dat'            ${outdir}/${date_now}/oceanvar/.
+mv ${wrkdir}'/OceanVar.diagnostics_'* ${outdir}/${date_now}/oceanvar/.
+rm ${wrkdir}/*

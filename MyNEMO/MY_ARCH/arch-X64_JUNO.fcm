@@ -1,0 +1,54 @@
+# mpi ifort compiler options for ZEUS cluster + XIOS
+#
+#
+# NCDF_INC    netcdf4 include file
+# NCDF_LIB    netcdf4 library
+# XIOS_INC    xios include file    (taken into accound only if key_xios is activated)
+# XIOS_LIB    xios library         (taken into accound only if key_xios is activated)
+#
+# CPP         Pre-processor
+# FC          Fortran compiler command
+# FCFLAGS     Fortran compiler flags
+# FFLAGS      Fortran 77 compiler flags
+# LD          linker
+# FPPFLAGS    pre-processing flags
+# LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries
+# AR          assembler
+# ARFLAGS     assembler flags
+# MK          make (usually GNU make)
+# USER_INC    complete list of include files
+# USER_LIB    complete list of libraries to pass to the linker
+# CC          C compiler used to compile conv for AGRIF
+# CFLAGS      compiler flags used with CC
+#
+# Note that:
+#  - unix variables "$..." are accpeted and will be evaluated before calling fcm.
+#  - fcm variables are starting with a % (and not a $)
+#
+
+# NETCDF, PNETCDF, HDF5  should be set automatically when loading modules on ZEUS cluster
+# User should set the path of xios compiled code (after r2134)
+#export XIOS=<path-to-xios>/xios
+# and load the same gcc version used to compile xios (e.g., module load gcc_9.1.0/9.1.0)
+
+%NCDF_INC            -I${NETCDF_C}/include -I${PARALLEL_NETCDF}/include
+%NCDF_LIB            -L${NETCDF_FORTRAN}/lib -lnetcdff -L${NETCDF_C}/lib -lnetcdf -L${PARALLEL_NETCDF}/lib -lpnetcdf
+%HDF5_INC            -I${HDF5}/include
+%HDF5_LIB            -L${HDF5}/lib -lhdf5_hl -lhdf5
+%XIOS_INC            -I${XIOS}/inc
+%XIOS_LIB            -L${XIOS}/lib -lxios
+
+%CPP                 cpp
+%FC                  mpiifort
+%FCFLAGS             -r8 -O3 -fp-model source -qmkl=cluster -xSKYLAKE-AVX512 -qopt-zmm-usage=low -no-fma
+%FFLAGS              %FCFLAGS
+%LD                  mpiifort
+%FPPFLAGS            -P -traditional
+%LDFLAGS             -lstdc++ -lz -lgpfs
+%AR                  ar 
+%ARFLAGS             -r
+%MK                  gmake
+%USER_INC            %XIOS_INC %NCDF_INC %HDF5_INC
+%USER_LIB            %XIOS_LIB %NCDF_LIB %HDF5_LIB
+%CC                  icc
+%CFLAGS              -O0

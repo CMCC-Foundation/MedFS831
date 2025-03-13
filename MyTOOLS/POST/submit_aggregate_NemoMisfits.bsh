@@ -1,0 +1,32 @@
+#!/bin/bash -l
+#BSUB -P 0510
+#BSUB -n 1
+#BSUB -N
+#BSUB -q s_short
+#BSUB -R "rusage[mem=1G]" 
+
+module load anaconda/3-2022.10
+
+analysis=true
+start_date=20210101
+  end_date=20210131
+
+if  ${analysis}; then
+   dirin='../../EXP-A/OUTPUT/'
+   dirou='../../EXP-A/POST/'
+else
+   dirin='../../EXP-S/OUTPUT/'
+   dirou='../../EXP-S/POST/'
+fi
+mkdir -p  $dirou
+
+date=$start_date
+
+while [ $date -le $end_date ]  ; do
+
+   python ${PWD}/aggregate_NemoMisfits.py ${dirin}/${date}/model/ $dirou
+
+   date=`date -d "$date +1 day" +%Y%m%d`
+
+done
+

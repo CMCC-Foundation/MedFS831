@@ -1,0 +1,144 @@
+#!/bin/bash
+#BSUB -P 0510
+#BSUB -n 1
+#BSUB -N
+#BSUB -q s_medium
+#BSUB -R "rusage[mem=1G]"
+#BSUB -o out.%J
+#BSUB -e err.%J
+
+
+
+function get_sat_name() {
+    local sat_type=$1
+
+    case "${sat_type}" in
+        "al" | "alg")
+            echo ALTIKA;;
+        "c2" | "c2n")
+            echo CRYOSAT2;;
+        "h2a" | "h2ag")
+            echo HY-2A;;
+        "h2b")
+            echo HY-2B;;
+        "j2")
+            echo JASON2;;
+        "j2n")
+            echo JASON2N;;
+        "j2g")
+            echo JASON2G;;
+        "j3" | "j3n")
+            echo JASON3;;
+        "s3a")
+            echo SENTINEL3A;;
+        "s3b")
+            echo SENTINEL3B;;
+        "s6a")
+            echo SENTINEL6A;;
+        *) echo "Satelite type not supported: '${sat_type}'"
+           exit 1 ;;
+    esac
+}
+
+
+make
+
+sat_list=(     AltiKa  Cryosat-2  ERS1  ERS2  Envisat  GFO  HY-2A  HY-2B  Jason-1  Jason-2  Jason-3  Sentinel-3A  Sentinel-3B  Sentinel-6A  TOPEX )
+sla_satellite=( alg    c2n        ers1  ers2  env      gfo  h2a    h2b    j1       j2       j3       s3a          s3b          s6a          tp )
+
+
+start_date=20210101
+end_date=20210131
+ndate=$start_date
+
+datadir=$PWD'/../../DATA/OBS'
+rootdir=$PWD'/../../DATA/OBSxNEMO/'
+
+grdfile=$PWD'/../../DATA/grid_medfs831.nc'          
+regfile=$PWD'/../../DATA/STATIC/MedFS_831_regs.nc'
+layfile=$PWD'/../../DATA/layout.dat'   
+
+
+wrkdir=${rootdir}'/wrk'
+outdir=${rootdir}'/out'
+indir=${rootdir}'/in'
+indir_ins=${indir}'/insitu'
+indir_sla=${indir}'/sla'
+
+rm -rf ${rootdir}
+mkdir -p ${wrkdir}
+mkdir -p ${outdir}
+mkdir -p ${indir_sla}
+mkdir -p ${indir_ins}
+
+region='med'
+
+while [ $ndate -le $end_date ]; do
+
+      year=`echo $ndate | cut -b"1-4"`
+      month=`echo $ndate | cut -b"5 6"`
+      day=`echo $ndate | cut -b"7 8"`
+
+      #insitu
+      python Prepare_insitu_files.py ${datadir}/Insitu/${ndate} ${wrkdir} ${outdir} ${region}
+      mv ${outdir}/*.nc ${indir}/.
+      rm -rf ${wrkdir}/*
+      python Preproc_insitu_med.py  ${indir}  ${wrkdir} ${outdir} ${region}
+      rm -f  ${indir}/*.nc
+      mv ${outdir}/*.nc ${indir_ins}/.
+      rm -rf ${wrkdir}/*
+
+      #satellite
+      for sat in ${sat_list[@]};do
+          satdir=$datadir/$sat/$year/$month/
+	  if [ -d ${satdir} ]; then
+          if    [ -e ${satdir}/dt_*_${ndate}*.nc ]; then
+	     filename=`ls ${satdir}/dt_*_${ndate}*.nc`
+             cp -r $filename  ${wrkdir}/.
+             filename=`basename ${filename}`
+	     chmod +w ${wrkdir}/${filename}
+             ./prep_SLA_3dvar_C7_EUR_DT_7km.exe ${satdir} ${wrkdir} ${filename} ${ndate} ${sat}
+	  elif [ -e  ${satdir}/nrt_*_${ndate}_????????.nc ]; then
+              filename=`ls ${satdir}/nrt_*_${ndate}_????????.nc`
+              cp -r $filename  ${wrkdir}/.
+              filename=`basename ${filename}`
+	     chmod +w ${wrkdir}/${filename}
+              echo $filename
+              ./prep_SLA_3dvar_C7_EUR_7km.exe ${satdir} ${wrkdir} ${filename} ${ndate} ${sat}
+	  fi
+	  fi
+      done
+
+      count_sat=0  # an index is associate to each sat
+      for sat in ${sla_satellite[@]}; do
+          ff=${wrkdir}/*_${sat}_*phy*_l3_*.nc
+          ls ${ff}
+          if [ $? -eq 0 ]; then
+              ff=$(echo $ff | awk '{print $NF}')
+              cnt[$count_sat]=$((${cnt[$count_sat]} + 1))
+              satName=$(get_sat_name ${sat})$(printf "%02d" ${cnt[$count_sat]})
+              mv $ff ${indir_sla}/${satName}
+              cnt[$count_sat]=0
+          fi
+          count_sat=$((count_sat + 1))
+      done
+
+      filename=`basename ${grdfile}`
+      ln -fs ${grdfile}           ${indir}/$filename
+      filename=`basename ${regfile}`
+      ln -fs ${regfile}           ${indir}/$filename
+      filename=`basename ${layfile}`
+      ln -fs ${layfile}           ${indir}/$filename
+      python Prepare_NemoObs.py  ${indir} ${indir_ins} ${indir_sla} ${outdir} ${ndate}
+      rm -f  ${indir}/*
+      rm -f  ${indir_sla}/*
+      rm -f  ${indir_ins}/*
+      rm -f  ${wrkdir}/*
+      mkdir -p ${rootdir}/${ndate}
+      mv ${outdir}/* ${rootdir}/${ndate}/. 
+
+      ndate=`date -d "$ndate +1 day" +%Y%m%d`
+done
+
+rm -rf ${indir} ${indir_sla} ${indir_ins} ${wrkdir} ${outdir}
+rm *.exe

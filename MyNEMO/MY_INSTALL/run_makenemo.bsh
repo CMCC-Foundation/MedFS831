@@ -1,0 +1,15 @@
+#!/bin/bash
+
+export XIOS=/data/cmcc/ma20223/xios2
+
+conf='MED08'
+
+./makenemo -n $conf -r 'AMM12' -m 'X64_JUNO' clean_config
+
+./makenemo -n $conf -r 'AMM12' -m 'X64_JUNO' -j 0 del_key 'key_diainstant'
+
+cp -r ../MyNEMO/MY_SRC      cfgs/MED08/.
+
+./makenemo -r $conf   -m 'X64_JUNO' -j 0  add_key 'key_mfs key_asminc'
+time ./makenemo -m 'X64_JUNO' -r $conf
+

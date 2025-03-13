@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export XIOS=/data/cmcc/ma20223/xios2
+
+./maketools -m 'X64_JUNO' -n 'DOMAINcfg'

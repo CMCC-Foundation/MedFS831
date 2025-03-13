@@ -1,0 +1,71 @@
+#!/bin/bash
+#BSUB -P 0510
+#BSUB -q p_short
+#BSUB -o out.%J
+#BSUB -e err.%J
+#BSUB -n 8
+#BSUB -M 8G
+#BSUB -W 60
+#BSUB -J med831
+
+
+export date_start=20210101
+export   date_end=20210131
+date_now=$date_start
+
+export NEMO=true
+export OCEANVAR=false
+export ln_obsmisfits=true
+
+export dataroot=$PWD'/../DATA/'
+export nemoroot=$PWD'/../medsea-nemo42/'
+export ocevarroot=$PWD'/../oceanvar2/'
+
+
+export cfgdir=${nemoroot}'/cfgs/MED08/cfg/'
+export nemofile=${nemoroot}'/cfgs/MED08/BLD/bin/nemo.exe'
+export nemonml=$PWD'/../MyNEMO/MY_NAMELIST/namelist_cfg_tpl'
+
+export oceanvarfile=${ocevarroot}'/bin/OceanVar'
+export oceanvarnml=${ocevarroot}'/namelist/OceanVar_nml_831'
+
+export oceanVarprep=${ocevarroot}'/prep/fromNEMOto3DVAR_withdetiding.py'
+
+if ${OCEANVAR}; then
+   export wrkdir=$PWD'/../EXP-A/WRK'
+   export logdir=$PWD/'/../EXP-A/LOG'
+   export outdir=$PWD/'/../EXP-A/OUTPUT'
+else
+   export wrkdir=$PWD/'/../EXP-S/WRK'
+   export logdir=$PWD/'/../EXP-S/LOG'
+   export outdir=$PWD/'/../EXP-S/OUTPUT'
+fi
+
+queue='p_short'
+cores=8
+
+
+mkdir -p ${wrkdir}
+mkdir -p ${outdir}
+mkdir -p ${logdir}
+
+rm -f ${wrkdir}/*
+
+while [ $date_now -le ${date_end} ]  ; do
+
+      echo $date_now
+      year=`echo $date_now | cut -b"1-4"`
+      month=`echo $date_now | cut -b"5 6"`
+      day=`echo $date_now | cut -b"7 8"`
+
+      # NEMO RUN
+      if [ "$NEMO" = true ] ; then
+	 ./run_nemo.bsh ${date_now}
+      fi
+      # OCEANVAR RUN
+      if [ "$OCEANVAR" = true ] ; then
+	 ./run_oceanvar.bsh ${date_now}
+      fi
+
+      date_now=`date -d "$date_now +1 day" +%Y%m%d`
+done

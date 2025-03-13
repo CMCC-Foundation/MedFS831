@@ -1,0 +1,458 @@
+#ifndef USE_POINTERS
+#define DYNMEM ALLOCATABLE
+#else
+#define DYNMEM POINTER
+#endif
+
+!AS: PREPROC COMMAND TO TUNE INTEGER PRECISION,
+!    WAS INT*8 IN THE ORIGINAL VERSION, WHICH
+!    MIGHT CAUSE TYPE CONVERSION ERRORS WHEN
+!    USING INT*4 AS INDEXES.
+
+#ifndef USE_INT8
+#define PREC_INT i4
+#else
+#define PREC_INT PREC_INT
+#endif
+
+
+!-----------------------------------------------------------------------
+!                                                                      !
+! OBSERVATIONAL VECTORS                                                !
+!                                                                      !
+! VERSION 1: S.DOBRICIC 2006                                           !
+!-----------------------------------------------------------------------
+
+INTEGER, PARAMETER ::                &
+      R4 = SELECTED_REAL_KIND( 6, 37),  &  ! REAL*4
+#ifdef NO_DOUBLEPREC
+      R8 = R4
+#else
+      R8 = SELECTED_REAL_KIND(12,307)      ! REAL*8
+#endif
+
+   INTEGER, PARAMETER :: NoSLASATS = 9
+   INTEGER, PARAMETER :: NoSSSSATS = 3
+   INTEGER, PARAMETER :: NoSSTSATS = 6
+   INTEGER , PARAMETER :: NPQ=4
+
+
+! ---
+! OBSERVATIONAL VECTOR IN THE COST FUNCTION
+   TYPE OBS_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF OBSERVATIONS
+        INTEGER(PREC_INT)              ::  K          ! OBSERVATION INDEX
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  AMO(:)     ! ANALYSIS - OBSERVATION
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  GRA(:)     ! OBSERVATIONAL GRADIENT
+        INTEGER(PREC_INT)              ::  SLA        ! FLAG FOR ASSIMILATION OF SLA
+        INTEGER(PREC_INT)              ::  ARG        ! FLAG FOR ASSIMILATION OF ARGO FLOATS
+        INTEGER(PREC_INT)              ::  XBT        ! FLAG FOR ASSIMILATION OF XBTS
+        INTEGER(PREC_INT)              ::  GLD        ! FLAG FOR ASSIMILATION OF GLIDERS
+        INTEGER(PREC_INT)              ::  VEL        ! FLAG FOR ASSIMILATION OF VELOCITY
+        INTEGER(PREC_INT)              ::  TRJ        ! FLAG FOR ASSIMILATION OF TRAJECTORIES
+        INTEGER(PREC_INT)              ::  SST        ! FLAG FOR ASSIMILATION OF SATELLITE SST OBS
+        INTEGER(PREC_INT)              ::  SSS        ! FLAG FOR ASSIMILATION OF SATELLITE SSS OBS
+
+   END TYPE OBS_T
+
+   TYPE (OBS_T)                 :: OBS
+
+! ---
+! OBSERVATIONAL VECTOR FOR SLA
+   TYPE SLA_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        LOGICAL  ::  USES(NOSLASATS)    ! WHETHER TO USE DIFFERENT SATS
+        INTEGER(I4) ::  ISLAOBS(NOSLASATS) ! NO OF OBS BY SAT
+        INTEGER(PREC_INT), DYNMEM     :: NIND(:)     ! INSTRUMENT
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! INSTRUMENT
+        INTEGER(PREC_INT), DYNMEM     :: TRACK(:)    ! TRACK NO
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        INTEGER(I4), DYNMEM     ::  EVE(:)     ! EVENT
+        INTEGER(I4), DYNMEM     ::  KSAT(:)    ! SATID
+        INTEGER(I4), DYNMEM     ::  BOT(:)     ! BOTTOM LEV FOR VERT INTEGRAT.
+        REAL(R8),    DYNMEM     ::  TDIST(:)   ! TEMPORAL DISTANCE FROM ANALTIME
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  MDT(:)     ! MDT
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:,:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  PQ(:,:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  DPT(:)     ! MAXIMUM DEPTH OF SURROUNDING POINTS
+        REAL(R8)   , DYNMEM     ::  BGERR(:)   ! BACKGROUND-ERROR IN OBS SPACE
+        REAL(R8)   , DYNMEM     ::  TB(:,:)    ! BACKGROUND TEM PROFILE
+        REAL(R8)   , DYNMEM     ::  SB(:,:)    ! BACKGROUND SAL PROFILE
+        REAL(R8)   , DYNMEM     ::  BCP(:,:)   ! BIAS CORR PREDICTOR
+        INTEGER(PREC_INT), DYNMEM     ::  MOI(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  MOJ(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD1(:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD2(:)      ! I INDEX OF THE NEAREST WEST POINT
+
+   END TYPE SLA_T
+
+   TYPE (SLA_T)                 :: SLA
+
+! ---
+! OBSERVATIONAL VECTOR FOR SST
+   TYPE SST_T
+        LOGICAL :: LLAMSRE,LLTMI,LLREMSS_MWOI_NC,LLREMSS_SWATH_AMSRE,LLSSTDACORR,&
+        & LLREMSS_SWATH_TMI
+        INTEGER(I4) ::  ISSTOBS(NOSSTSATS)
+        ! WHETHER TO USE AMSR-E, TMI, MWOI
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBS
+        INTEGER(PREC_INT), DYNMEM     :: TRACK(:)    ! TRACK NO
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG
+        INTEGER(PREC_INT), DYNMEM     :: NIND(:)     ! INSTRUMENT
+        INTEGER(I4), DYNMEM     ::  EVE(:)     ! EVENT
+        INTEGER(I4), DYNMEM     ::  KSAT(:)    ! SATID
+        REAL(R8),    DYNMEM     ::  TDIST(:)   ! TEMPORAL DISTANCE FROM ANALTIME
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:,:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  PQ(:,:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  BGERR(:)   ! BACKGROUND-ERROR IN OBS SPACE
+        REAL(R8)   , DYNMEM     ::  BCP(:,:)   ! BIAS CORR PREDICTOR
+        INTEGER(PREC_INT), DYNMEM     ::  MOI(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  MOJ(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD1(:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD2(:)      ! I INDEX OF THE NEAREST WEST POINT
+   END TYPE SST_T
+
+   TYPE (SST_T)                 :: SST
+
+! ---
+! OBSERVATIONAL VECTOR FOR SSS
+   TYPE SSS_T
+        LOGICAL :: LLAQUARIUS, LLSMOS
+        INTEGER(I4) ::  ISSSOBS(NOSSSSATS)
+        ! WHETHER TO USE AMSR-E, TMI, MWOI
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBS
+        INTEGER(PREC_INT), DYNMEM     :: TRACK(:)    ! TRACK NO
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG
+        INTEGER(PREC_INT), DYNMEM     :: NIND(:)     ! INSTRUMENT
+        INTEGER(I4), DYNMEM     ::  EVE(:)     ! EVENT
+        INTEGER(I4), DYNMEM     ::  KSAT(:)    ! SATID
+        REAL(R8),    DYNMEM     ::  TDIST(:)   ! TEMPORAL DISTANCE FROM ANALTIME
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        REAL(R8)   , DYNMEM     ::  BGERR(:)   ! BACKGROUND-ERROR IN OBS SPACE
+        REAL(R8)   , DYNMEM     ::  BCP(:,:)   ! BIAS CORR PREDICTOR
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:,:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  PQ(:,:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        INTEGER(PREC_INT), DYNMEM     ::  MOI(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  MOJ(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD1(:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD2(:)      ! I INDEX OF THE NEAREST WEST POINT
+   END TYPE SSS_T
+
+   TYPE (SSS_T)                 :: SSS
+
+
+! ---
+! OBSERVATIONAL VECTOR FOR ARGO FLOATS
+   TYPE ARG_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! FLOAT NUMBER
+        INTEGER(PREC_INT), DYNMEM     ::  PAR(:)     ! PARAMETER FLAG (1-TEMPERATURE, 2-SALINITY)
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  DPT(:)     ! DEPTH
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:)      ! I INDEX OF THE NEAREST WEST POINT
+        REAL(R8)   , DYNMEM     ::  PB(:)      ! DISTANCE FROM THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  QB(:)      ! DISTANCE FROM THE NEAREST SOUTH POINT
+        INTEGER(PREC_INT), DYNMEM     ::  KB(:)      ! K INDEX OF THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  RB(:)      ! DISTANCE FROM THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  PQ1(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ2(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ3(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ4(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ5(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ6(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ7(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ8(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+
+   END TYPE ARG_T
+
+   TYPE (ARG_T)                 :: ARG
+
+! ---
+! OBSERVATIONAL VECTOR FOR XBT PROFILES
+   TYPE XBT_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! FLOAT NUMBER
+        INTEGER(PREC_INT), DYNMEM     ::  PAR(:)     ! PARAMETER FLAG (1-TEMPERATURE)
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  DPT(:)     ! DEPTH
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:)      ! I INDEX OF THE NEAREST WEST POINT
+        REAL(R8)   , DYNMEM     ::  PB(:)      ! DISTANCE FROM THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  QB(:)      ! DISTANCE FROM THE NEAREST SOUTH POINT
+        INTEGER(PREC_INT), DYNMEM     ::  KB(:)      ! K INDEX OF THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  RB(:)      ! DISTANCE FROM THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  PQ1(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ2(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ3(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ4(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ5(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ6(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ7(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ8(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+
+   END TYPE XBT_T
+
+   TYPE (XBT_T)                 :: XBT
+
+! ---
+! OBSERVATIONAL VECTOR FOR GLIDERS
+   TYPE GLD_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! GLIDER NUMBER
+        INTEGER(PREC_INT), DYNMEM     ::  PAR(:)     ! PARAMETER FLAG (1-TEMPERATURE, 2-SALINITY)
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  DPT(:)     ! DEPTH
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:)      ! I INDEX OF THE NEAREST WEST POINT
+        REAL(R8)   , DYNMEM     ::  PB(:)      ! DISTANCE FROM THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  QB(:)      ! DISTANCE FROM THE NEAREST SOUTH POINT
+        INTEGER(PREC_INT), DYNMEM     ::  KB(:)      ! K INDEX OF THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  RB(:)      ! DISTANCE FROM THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  PQ1(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ2(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ3(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ4(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ5(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ6(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ7(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ8(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+
+   END TYPE GLD_T
+
+   TYPE (GLD_T)                 :: GLD
+
+! ---
+! OBSERVATIONAL VECTOR FOR VELOCITY
+   TYPE VEL_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! FLOAT NUMBER
+        INTEGER(PREC_INT), DYNMEM     ::  PAR(:)     ! PARAMETER FLAG (1 - U COMPONENT, 2 - V COMPONENT)
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUDE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  DPH(:)     ! DEPTH
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:)      ! I INDEX OF THE NEAREST WEST POINT
+        REAL(R8)   , DYNMEM     ::  PB(:)      ! DISTANCE FROM THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  QB(:)      ! DISTANCE FROM THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  PQ1(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ2(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ3(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ4(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  DPT(:)     ! MAXIMUM DEPTH OF SURROUNDING POINTS
+
+   END TYPE VEL_T
+
+   TYPE (VEL_T)                 :: VEL
+
+! ---
+! OBSERVATIONAL VECTOR FOR TRAJECTORY
+   TYPE TRJ_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! FLOAT NUMBER
+        INTEGER(PREC_INT), DYNMEM     ::  PAR(:)     ! PARAMETER FLAG (1 - U COMPONENT, 2 - V COMPONENT)
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUDE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  DPH(:)     ! DEPTH
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:)      ! I INDEX OF THE NEAREST WEST POINT
+        REAL(R8)   , DYNMEM     ::  PB(:)      ! DISTANCE FROM THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  QB(:)      ! DISTANCE FROM THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  PQ1(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ2(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ3(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  PQ4(:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  DPT(:)     ! MAXIMUM DEPTH OF SURROUNDING POINTS
+        INTEGER(PREC_INT)              ::  JPT        ! TEMPORAL DIMENSION OF TRAJECTORIES
+        INTEGER(PREC_INT)              ::  JPN        ! NUMBER OF TRAJECTORIES
+        INTEGER(PREC_INT)              ::  IMB        ! DIMENSION OF MEAN VELOCITY
+        INTEGER(PREC_INT)              ::  JMB        ! DIMENSION OF MEAN VELOCITY
+        REAL(R8)   , DYNMEM     ::  UMN(:,:)   ! U COMPONENT OF BACKGROUND VELOCITY
+        REAL(R8)   , DYNMEM     ::  VMN(:,:)   ! V COMPONENT OF BACKGROUND VELOCITY
+        REAL(R8)   , DYNMEM     ::  XMN(:,:)   ! X COORDINATE OF MEAN TRAJECTORY POSITION
+        REAL(R8)   , DYNMEM     ::  YMN(:,:)   ! Y COORDINATE OF MEAN TRAJECTORY POSITION
+        REAL(R8)   , DYNMEM     ::  TIM(:)     ! TIME OF THE DURATION OF THE TRAJECTORY
+        REAL(R8)   , DYNMEM     ::  XTL(:)     ! DELTA X OF TRAJECTORY CORRECTION
+        REAL(R8)   , DYNMEM     ::  YTL(:)     ! DELTA Y OF TRAJECTORY CORRECTION
+        REAL(R8)   , DYNMEM     ::  XTL_AD(:)  ! DELTA X OF TRAJECTORY CORRECTION (ADJOINT)
+        REAL(R8)   , DYNMEM     ::  YTL_AD(:)  ! DELTA Y OF TRAJECTORY CORRECTION (ADJOINT)
+        REAL(R8)   , DYNMEM     ::  XOB(:)     ! OBSERVATION OF THE LAST TRAJECTORY POSITION
+        REAL(R8)   , DYNMEM     ::  YOB(:)     ! OBSERVATION OF THE LAST TRAJECTORY POSITION
+
+
+   END TYPE TRJ_T
+
+   TYPE (TRJ_T)                 :: TRJ
+
+! ---
+! OBSERVATIONAL VECTOR FOR INS
+!...................................
+!
+! REPLACE XBT AND ARG WHEN COBSMETHOD='NEW', THAT IS
+! READ ALL OBS FROM ENSEMBLES INS AND STORE THEM
+! TOGETHER, KEEPING TYPE/INSTRUMENT-RELATED INFOS
+
+   TYPE INS_T
+
+        INTEGER(PREC_INT)              ::  NO         ! NUMBER OF ALL OBSERVATIONS
+        INTEGER(PREC_INT)              ::  NC         ! NUMBER OF GOOD OBSERVATIONS
+        REAL(R8)                 ::  DEP        ! MINIMUM DEPTH FOR OBSERVATIONS
+        INTEGER(PREC_INT)              ::  KDP        ! MODEL LEVEL CORRESPONDING TO DEP
+        INTEGER(I4)              ::  NPROFS     ! NO OF PROFILES
+
+        INTEGER(PREC_INT), DYNMEM     ::  NIND(:)    ! INDEX OF OBS (FOR REARRANGING ROUTINES)
+        INTEGER(PREC_INT), DYNMEM     ::  INO(:)     ! FLOAT NUMBER
+        INTEGER(PREC_INT), DYNMEM     ::  OTYPE(:)   ! SEE OBS_PARAMS.H
+        INTEGER(PREC_INT), DYNMEM     ::  PAR(:)     ! PARAMETER, SEE OBS_PARAMS.H
+        CHARACTER(LEN=8),DYNMEM       :: PLNO(:)     ! PLATFORM NUMBER
+        CHARACTER(LEN=3),DYNMEM       :: DSRC(:)     ! DATA SOURCE ('EN3', 'GTS', 'ARG')
+        INTEGER(PREC_INT), DYNMEM     ::  INST(:)    ! PARAMETER FLAG (1-TEMPERATURE)
+        INTEGER(PREC_INT), DYNMEM     ::  FLG(:)     ! QUALITY FLAG
+        INTEGER(PREC_INT), DYNMEM     ::  FLC(:)     ! TEMPORARY FLAG FOR MULTIGRID
+        INTEGER(PREC_INT), DYNMEM     ::  EVE(:)     ! EVENT
+        INTEGER(I4), DYNMEM     ::PRIND(:)     ! PROFILES ID, POINTS TO 1ST OBS
+        INTEGER(I4), DYNMEM     ::  KTY(:)     ! TYPE, SEQ
+        INTEGER(I4), DYNMEM     :: PROF(:)     ! PROFILE ID
+        REAL(R8),    DYNMEM     ::  TDIST(:)   ! TEMPORAL DISTANCE FROM ANALTIME
+        REAL(R8),    DYNMEM     ::  LON(:)     ! LONGITUTE
+        REAL(R8),    DYNMEM     ::  LAT(:)     ! LATITUDE
+        REAL(R8),    DYNMEM     ::  DPT(:)     ! DEPTH
+        REAL(R8),    DYNMEM     ::  TIM(:)     ! TIME
+        REAL(R8),    DYNMEM     ::  VAL(:)     ! OBSERVED VALUE
+        REAL(R8),    DYNMEM     ::  BAC(:)     ! BACKGROUND VALUE
+        REAL(R8),    DYNMEM     ::  INC(:)     ! INCREMENTS
+        REAL(R8),    DYNMEM     ::  BIA(:)     ! BIAS
+        REAL(R8),    DYNMEM     ::  ERR(:)     ! OBSERVATIONAL ERROR
+        REAL(R8),    DYNMEM     ::  RES(:)     ! RESIDUAL
+        REAL(R8),    DYNMEM     ::  B_A(:)     ! BACKGROUND - ANALYSES
+        INTEGER(PREC_INT), DYNMEM     ::  KB(:)      ! K INDEX OF THE NEAREST POINT BELOW
+        REAL(R8)   , DYNMEM     ::  RB(:)      ! DISTANCE FROM THE NEAREST POINT BELOW
+        INTEGER(PREC_INT), DYNMEM     ::  IB(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  JB(:,:)      ! J INDEX OF THE NEAREST SOUTH POINT
+        REAL(R8)   , DYNMEM     ::  PQ(:,:)     ! INTERPOLATION PARAMETER FOR MASKED GRIDS
+        REAL(R8)   , DYNMEM     ::  BGERR(:)   ! BACKGROUND-ERROR IN OBS SPACE
+        INTEGER(PREC_INT), DYNMEM     ::  MOI(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  MOJ(:,:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD1(:)      ! I INDEX OF THE NEAREST WEST POINT
+        INTEGER(PREC_INT), DYNMEM     ::  SD2(:)      ! I INDEX OF THE NEAREST WEST POINT
+
+   END TYPE INS_T
+
+   TYPE (INS_T),SAVE     :: INS

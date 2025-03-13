@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#gfortran
+#export NETCDF=/Users/marioadani/miniforge3/envs/MyEnv/
+#gfortran                    \
+#         utils.F90          \
+#         coast_dist.F90     \
+#         mk_cstdst_file.F90 \
+#         -o cstdst.x        \
+#       -I/${NETCDF}/include \
+#       -L/${NETCDF}/lib -lnetcdff -lnetcdf
+
+ifort                       \
+         utils.F90          \
+         coast_dist.F90     \
+         mk_cstdst_file.F90 \
+         -o cstdst.x        \
+       -I/${NETCDF}/include \
+       -L/${NETCDF}/lib -lnetcdff -lnetcdf
+
