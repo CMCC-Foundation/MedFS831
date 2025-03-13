@@ -155,7 +155,7 @@ def readnc(filename):
             dummy2 =  nc.variables[var][:].compressed()
             out[var] = np.array(num2pydate(dummy2, units=dummy1.units,calendar=dummy1.calendar)) 
         else:
-            out[var] = nc.variables[var][:].squeeze()  
+            out[var] = nc.variables[var][:]
     nc.close()
     return out 
 

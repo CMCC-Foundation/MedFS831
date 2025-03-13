@@ -20,10 +20,11 @@ install ttide_py from https://github.com/moflaher/ttide_py
 14) cd DOMAINcfg
 15) cp  ../../../MyNEMO/MY_NAMELIST/namelist_cfg_MedFS831_dom namelist_cfg
 16) ln -fs ../../../DATA/STATIC/bathy_meter.nc .
-17) cd ../../../MyTOOLS/BDY_NEMO
-18) python mk_bdycoords.py
-19) cd ../../SCRIPT/
-20) vi submit_MedFS831.bsh
+17) ./make_domain_cfg.exe 
+18) cd ../../../MyTOOLS/BDY_NEMO
+19) python mk_bdycoords.py
+20) cd ../../SCRIPT/
+21) vi submit_MedFS831.bsh
 21.1) date_end=20210101
 21.2) OCEANVAR=false
 21.3) ln_obsmisfits=false
