@@ -49,9 +49,10 @@ install ttide_py from https://github.com/moflaher/ttide_py
 36.3) ln_obsmisfits=true
 36.4) bsub < submit_MedFS831.bsh 
 37) vi submit_MedFS831.bsh
-37.1) OCEANVAR=false
-37.2) ln_obsmisfits=false
-37.3) bsub < submit_MedFS831.bsh 
+37.1) date_end=20210131
+37.2) OCEANVAR=false
+37.3) ln_obsmisfits=true
+37.4) bsub < submit_MedFS831.bsh 
 38) cd ../MyTOOLS/POST
 39) vi submit_aggregate_NemoMisfits.bsh
 39.1) analysis=false
