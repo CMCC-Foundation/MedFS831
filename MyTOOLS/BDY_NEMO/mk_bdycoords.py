@@ -41,7 +41,7 @@ for j in range(src['nbit'].shape[1]):
     src['nbjt'][:,j,:] = j+1
     src['nbju'][:,j,:] = j+1
     src['nbjv'][:,j,:] = j+1
-plt.pcolor( src['nbit'].squeeze());plt.colorbar()
+#plt.pcolor( src['nbit'].squeeze());plt.colorbar()
 
 #####################   
 # List of variables to be processed for T,U,V grid respectively
