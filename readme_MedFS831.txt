@@ -2,6 +2,7 @@
 module load anaconda/3-2022.10 impi-2021.6.0/2021.6.0 intel-2021.6.0/libszip/2.1.1-tvhyi oneapi-2022.1.0/2022.1.0 oneapi-2022.1.0/mkl/2022.1.0 intel-2021.6.0/impi-2021.6.0/hdf5-threadsafe/1.13.3-zbgha intel-2021.6.0/impi-2021.6.0/netcdf-c-threadsafe/4.9.0-wpe4t intel-2021.6.0/impi-2021.6.0/netcdf-fortran-threadsafe/4.6.0-75oow intel-2021.6.0/impi-2021.6.0/parallel-netcdf/1.12.3-eshb5 intel-2021.6.0/curl/7.85.0-djjip intel-2021.6.0/perl/5.36.0-jj4hw intel-2021.6.0/perl-uri/1.72-6at2i intel-2021.6.0/nco/5.0.6-jp6y4 intel-2021.6.0/cdo-threadsafe
 
 install ttide_py from https://github.com/moflaher/ttide_py
+install gsw-Python from https://teos-10.github.io/GSW-Python/
 -- LOAD ENVIRONMENT --
 
 01) mkdir MedFS831
