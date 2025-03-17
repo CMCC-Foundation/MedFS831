@@ -38,7 +38,7 @@ install gsw-Python from https://teos-10.github.io/GSW-Python/
 27) cd ../OBS_NEMO
 28) bsub < run_prep.bsh
 29) cd ../../
-30) git clone -b develop_TBR git@github.com:CMCC-Foundation/3DVAR_v0.1 oceanvar2 (please check the correct version develop_TBR could be outdated )
+30) git clone -b main git@github.com:CMCC-Foundation/3DVAR_v0.1 oceanvar2 
 31) cd  oceanvar2/src
 32) ./link_in_work
 33) cd ../work/
