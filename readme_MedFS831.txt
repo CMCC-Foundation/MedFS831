@@ -5,7 +5,7 @@ install ttide_py from https://github.com/moflaher/ttide_py
 install gsw-Python from https://teos-10.github.io/GSW-Python/
 -- LOAD ENVIRONMENT --
 
-01) mkdir MedFS831
+01) git clone -b main git@github.com:CMCC-Foundation/MedFS831.git MedFS831 
 02) cd MedFS831
 03) git clone  --branch 4.2.0 https://forge.nemo-ocean.eu/nemo/nemo.git   medsea-nemo42
 04) cp MyNEMO/MY_ARCH/arch-X64_JUNO.fcm medsea-nemo42/arch/.
@@ -38,7 +38,7 @@ install gsw-Python from https://teos-10.github.io/GSW-Python/
 27) cd ../OBS_NEMO
 28) bsub < run_prep.bsh
 29) cd ../../
-30) git clone -b main git@github.com:CMCC-Foundation/3DVAR_v0.1 oceanvar2 
+30) git clone -b main git@github.com:CMCC-Foundation/OceanVar2 oceanvar2 
 31) cd  oceanvar2/src
 32) ./link_in_work
 33) cd ../work/
